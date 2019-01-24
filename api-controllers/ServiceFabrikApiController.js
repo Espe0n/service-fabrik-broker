@@ -347,7 +347,7 @@ class ServiceFabrikApiController extends FabrikBaseController {
           restore_guid: metadata.restore_guid,
           instance_guid: req.params.instance_id,
           arguments: _.assign({
-              backup: _.pick(metadata, 'type', 'secret')
+              backup: _.pick(metadata, 'type', 'secret', 'snapshotId')
             },
             req.body, {
               backup_guid: _.get(metadata, 'backup_guid')
@@ -546,6 +546,7 @@ class ServiceFabrikApiController extends FabrikBaseController {
     const backupGuid = req.body.backup_guid;
     const timeStamp = req.body.time_stamp;
     const tenantId = req.entity.tenant_id;
+    const restoreType = CONST.APISERVER.RESOURCE_TYPES.DEFAULT_RESTORE;
     let backupSpaceGuid = tenantId;
     const sourceInstanceId = req.body.source_instance_id || req.params.instance_id;
     return Promise
@@ -636,10 +637,13 @@ class ServiceFabrikApiController extends FabrikBaseController {
         .getRestoreOptions(req, metadata)
         .then(restoreOptions => {
           logger.info(`Triggering restore with options: ${JSON.stringify(restoreOptions)}`);
+          const service = this.getService(serviceId);
+          restoreType = _.get(service, 'restore_operation.type') === 'defaultboshrestore' ? 
+            CONST.APISERVER.RESOURCE_TYPES.DEFAULT_BOSH_RESTORE : CONST.APISERVER.RESOURCE_TYPES.DEFAULT_RESTORE ;
           return lockManager.lock(req.params.instance_id, {
               lockedResourceDetails: {
                 resourceGroup: CONST.APISERVER.RESOURCE_GROUPS.RESTORE,
-                resourceType: CONST.APISERVER.RESOURCE_TYPES.DEFAULT_RESTORE,
+                resourceType: restoreType,
                 resourceId: restoreGuid,
                 operation: CONST.OPERATION_TYPE.RESTORE
               }
@@ -649,7 +653,7 @@ class ServiceFabrikApiController extends FabrikBaseController {
               return eventmesh.apiServerClient.createResource({
                 resourceGroup: CONST.APISERVER.RESOURCE_GROUPS.RESTORE,
                 //TODO read from plan details
-                resourceType: CONST.APISERVER.RESOURCE_TYPES.DEFAULT_RESTORE,
+                resourceType: restoreType,
                 resourceId: restoreGuid,
                 options: restoreOptions,
                 status: {
