@@ -441,5 +441,6 @@ module.exports = Object.freeze({
   SYSTEM_ERRORS: ['ECONNREFUSED', 'ECONNRESET', 'EPIPE', 'ETIMEDOUT', 'ESOCKETTIMEDOUT'],
   INTERNAL: 'internal',
   ALL: 'all',
+  ANY: 'any',
   DISABLED: 'disabled'
 });
